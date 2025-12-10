@@ -1,160 +1,164 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Орбитальная симуляция — PyScript</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Орбитальная симуляция — PyScript</title>
 
-  <link rel="stylesheet" href="https://pyscript.net/releases/2024.6.1/core.css" />
-  <script defer src="https://pyscript.net/releases/2024.6.1/core.js"></script>
+<!-- PyScript CSS + JS -->
+<link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+<script defer type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
 
-  <style>
-    body{font-family:Inter, sans-serif; margin:18px; background:#f7fafc;color:#0f172a}
-    .card{background:white;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.06);margin-bottom:16px}
-    header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-    .controls{display:flex;gap:12px;flex-wrap:wrap}
-    label{font-size:13px;color:#6b7280}
-    button{background:#2563eb;color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
-    button.secondary{background:#e2e8f0;color:#0f172a}
-    #output{height:200px;overflow:auto;background:#0b1220;color:#e6eef8;padding:10px;border-radius:8px;font-family:monospace;font-size:13px}
-    #plot{min-height:420px}
-    .progress{height:12px;background:#e6eef8;border-radius:999px;overflow:hidden}
-    .progress > i{display:block;height:100%;background:linear-gradient(90deg,#2563eb,#7c3aed);width:0%}
-    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
-    @media (max-width:900px){.grid{grid-template-columns:1fr}}
-  </style>
+<style>
+  :root{--accent:#2563eb;--muted:#6b7280}
+  body{font-family:Inter, system-ui, sans-serif; margin:18px; background:#f7fafc;color:#0f172a}
+  .card{background:white;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.06);margin-bottom:16px}
+  header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+  h1{font-size:20px;margin:0}
+  .controls{display:flex;gap:12px;flex-wrap:wrap}
+  label{font-size:13px;color:var(--muted)}
+  button{background:var(--accent);color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+  button.secondary{background:#e2e8f0;color:#0f172a}
+  #output{height:200px;overflow:auto;background:#0b1220;color:#e6eef8;padding:10px;border-radius:8px;font-family:monospace;font-size:13px}
+  #plot{min-height:420px}
+  .progress{height:12px;background:#e6eef8;border-radius:999px;overflow:hidden}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#7c3aed);width:0%}
+  .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+  footer{font-size:13px;color:var(--muted);margin-top:8px}
+  @media (max-width:900px){.grid{grid-template-columns:1fr} }
+</style>
 </head>
 <body>
+<div class="card header">
+  <header>
+    <h1>Визуальная орбитальная симуляция — PyScript</h1>
+    <div style="margin-left:auto;color:var(--muted);font-size:13px">Запуск в браузере (Pyodide)</div>
+  </header>
+  <div class="controls">
+    <label>Дней моделирования
+      <input id="days" type="number" value="30" min="1" max="365" style="width:110px;margin-left:8px">
+    </label>
 
-  <div class="card header">
-    <header>
-      <h1>Орбитальная симуляция — PyScript</h1>
-      <div style="margin-left:auto;color:#6b7280;font-size:13px">Pyodide в браузере</div>
-    </header>
+    <label>Точек (плотность)
+      <input id="npoints" type="number" value="1500" min="200" max="20000" step="100" style="width:120px;margin-left:8px">
+    </label>
 
-    <div class="controls">
-      <label>Дней <input id="days" type="number" value="10" min="1" max="365"></label>
-      <label>Точек <input id="npoints" type="number" value="2000" min="300" max="20000"></label>
-      <label>J2 <input id="j2" type="checkbox" checked></label>
-      <label>Rel <input id="rel" type="checkbox" checked></label>
+    <label>J2
+      <input id="j2" type="checkbox" checked style="margin-left:8px">
+    </label>
 
-      <button id="run">Запустить</button>
-      <button id="stop" class="secondary">Остановить</button>
-    </div>
+    <label>Релятивистские эффекты
+      <input id="rel" type="checkbox" checked style="margin-left:8px">
+    </label>
+
+    <button id="run">Запустить</button>
+    <button id="stop" class="secondary">Остановить</button>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h3>Графики</h3>
+    <div id="plot"></div>
   </div>
 
-  <div class="grid">
-    <div class="card">
-      <h3>Графики</h3>
-      <div id="plot"></div>
-    </div>
-
-    <div class="card">
-      <h3>Вывод</h3>
-      <div class="progress"><i id="bar"></i></div>
-      <div id="output">Готов к запуску.</div>
-    </div>
+  <div class="card">
+    <h3>Статус и потоковый вывод</h3>
+    <div style="margin-bottom:8px">Прогресс:</div>
+    <div class="progress"><i id="bar"></i></div>
+    <div style="height:10px"></div>
+    <div id="output">Готов к запуску.</div>
+    <footer>Первая загрузка Pyodide может занять несколько секунд — ждите.</footer>
   </div>
+</div>
 
-<!-- PyScript config -->
-<script type="py-config">
-packages = ["numpy", "matplotlib", "scipy"]
-</script>
-
-<!-- PYTHON CODE -->
-<script type="py">
-
+<!-- PyScript код -->
+<py-script>
 from js import document
 import numpy as np
-import math
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
+from pyodide.ffi import create_proxy
 from pyscript import display
+import math
 
 output = document.getElementById("output")
 bar = document.getElementById("bar")
 
-def log(x):
-    output.innerHTML += str(x) + "<br>"
+def log(msg):
+    output.innerHTML += msg + "\n"
     output.scrollTop = output.scrollHeight
 
-def set_progress(p):
-    bar.style.width = f"{p:.1f}%"
+def set_progress(pct):
+    pct = max(0, min(100, pct))
+    bar.style.width = f"{pct:.2f}%"
 
-# --- твой класс физики ---
-class RealisticSatelliteSystem:
+_running = {'flag': False}
+
+class SatelliteSystem:
     def __init__(self, relativistic=True, include_J2=True):
         self.G = 6.67430e-11
-        self.c = 299792458.0
-        self.c2 = self.c**2
-        self.M_earth = 5.9742e24
-        self.R_earth = 6378137.0
-        self.J2 = 1.08263e-3
-        self.mu = self.G * self.M_earth
-        self.relativistic = relativistic
-        self.include_J2 = include_J2
+        self.M = 5.9742e24
+        self.R = 6378137.0
+        self.mu = self.G * self.M
+        self.rel = relativistic
+        self.J2 = include_J2
 
-    def geodesic_acc(self, r, v):
-        R = np.linalg.norm(r)
-        a = -self.mu * r / R**3
+    def acc(self, r, v):
+        r_norm = np.linalg.norm(r)
+        a = -self.mu * r / r_norm**3
         return a
 
-def rhs(t, y, sys):
-    r = np.array([y[0],y[1],y[2]])
-    v = np.array([y[3],y[4],y[5]])
-    a = sys.geodesic_acc(r,v)
-    return [v[0],v[1],v[2],a[0],a[1],a[2]]
+def rhs(t, y, system):
+    r = y[:3]
+    v = y[3:]
+    a = system.acc(r, v)
+    return np.concatenate([v, a])
 
-_running = False
+def integrate(state, t_eval, system):
+    sol = solve_ivp(lambda t,y: rhs(t,y,system), (t_eval[0], t_eval[-1]), state, t_eval=t_eval, rtol=1e-9)
+    return sol.t, sol.y
 
-async def run_all(event=None):
-    global _running
-    if _running:
+def run(ev=None):
+    if _running['flag']:
+        log("Выполняется уже...")
         return
-
-    _running = True
-    output.innerHTML = "Запуск...<br>"
+    _running['flag'] = True
+    output.innerHTML = ""
     set_progress(0)
 
-    days = int(document.getElementById("days").value)
-    npoints = int(document.getElementById("npoints").value)
-    j2 = document.getElementById("j2").checked
-    rel = document.getElementById("rel").checked
+    days = int(document.getElementById('days').value)
+    npoints = int(document.getElementById('npoints').value)
 
-    sys = RealisticSatelliteSystem(relativistic=rel, include_J2=j2)
-    log("Параметры загружены")
-
+    system = SatelliteSystem()
+    r0 = np.array([system.R + 400e3, 0, 0])
+    v0 = np.array([0, math.sqrt(system.mu/np.linalg.norm(r0)), 0])
+    state = np.concatenate([r0, v0])
     t_eval = np.linspace(0, days*86400, npoints)
-    y0 = [sys.R_earth+400000, 0,0, 0,7700,0]
 
     log("Интеграция...")
-    sol = solve_ivp(lambda t,y: rhs(t,y,sys),
-                    (0, days*86400),
-                    y0, t_eval=t_eval)
-
-    log("Построение графика...")
-    fig, ax = plt.subplots(figsize=(6,4))
-    R = np.sqrt(sol.y[0]**2 + sol.y[1]**2 + sol.y[2]**2)
-    ax.plot(t_eval/86400, R/1000)
-    ax.set_xlabel("Дни")
-    ax.set_ylabel("Высота, км")
-
-    display(fig, target="plot")
-    log("Готово!")
-
-    _running = False
+    t, y = integrate(state, t_eval, system)
     set_progress(100)
 
-def stop_all(event=None):
-    global _running
-    _running = False
-    log("Остановлено.")
+    log("Рисуем график...")
+    plt.figure(figsize=(6,4))
+    plt.plot(t/86400, y[0])
+    plt.xlabel("Время (дни)")
+    plt.ylabel("X (м)")
+    plt.grid(True)
+    display(plt.gcf(), target="plot")
+    log("Готово")
+    _running['flag'] = False
 
-# привязка кнопок
-document.getElementById("run").addEventListener("click", run_all)
-document.getElementById("stop").addEventListener("click", stop_all)
+def stop(ev=None):
+    _running['flag'] = False
+    log("Остановлено пользователем")
 
-</script>
+run_btn = document.getElementById("run")
+stop_btn = document.getElementById("stop")
+run_btn.addEventListener("click", create_proxy(run))
+stop_btn.addEventListener("click", create_proxy(stop))
+</py-script>
 
 </body>
 </html>
