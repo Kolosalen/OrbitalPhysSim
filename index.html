@@ -1,164 +1,91 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Орбитальная симуляция — PyScript</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ОТО и GPS Симулятор</title>
+    
+    <link rel="stylesheet" href="https://pyscript.net/releases/2023.05.1/pyscript.css" />
+    <script defer src="https://pyscript.net/releases/2023.05.1/pyscript.js"></script>
 
-<!-- PyScript CSS + JS -->
-<link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
-<script defer type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
-
-<style>
-  :root{--accent:#2563eb;--muted:#6b7280}
-  body{font-family:Inter, system-ui, sans-serif; margin:18px; background:#f7fafc;color:#0f172a}
-  .card{background:white;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.06);margin-bottom:16px}
-  header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-  h1{font-size:20px;margin:0}
-  .controls{display:flex;gap:12px;flex-wrap:wrap}
-  label{font-size:13px;color:var(--muted)}
-  button{background:var(--accent);color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
-  button.secondary{background:#e2e8f0;color:#0f172a}
-  #output{height:200px;overflow:auto;background:#0b1220;color:#e6eef8;padding:10px;border-radius:8px;font-family:monospace;font-size:13px}
-  #plot{min-height:420px}
-  .progress{height:12px;background:#e6eef8;border-radius:999px;overflow:hidden}
-  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#7c3aed);width:0%}
-  .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
-  footer{font-size:13px;color:var(--muted);margin-top:8px}
-  @media (max-width:900px){.grid{grid-template-columns:1fr} }
-</style>
+    <style>
+        body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        #loading { color: blue; font-weight: bold; }
+        #output-text { 
+            background: #f0f0f0; 
+            padding: 10px; 
+            white-space: pre-wrap; 
+            font-family: monospace; 
+            max-height: 400px; 
+            overflow-y: auto;
+            border: 1px solid #ccc;
+        }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px;}
+        button:disabled { background: #ccc; }
+    </style>
 </head>
 <body>
-<div class="card header">
-  <header>
-    <h1>Визуальная орбитальная симуляция — PyScript</h1>
-    <div style="margin-left:auto;color:var(--muted);font-size:13px">Запуск в браузере (Pyodide)</div>
-  </header>
-  <div class="controls">
-    <label>Дней моделирования
-      <input id="days" type="number" value="30" min="1" max="365" style="width:110px;margin-left:8px">
-    </label>
 
-    <label>Точек (плотность)
-      <input id="npoints" type="number" value="1500" min="200" max="20000" step="100" style="width:120px;margin-left:8px">
-    </label>
+    <h1>Симулятор: Влияние ОТО на GPS</h1>
+    <p>Нажмите кнопку ниже, чтобы запустить расчет (это может занять 5-10 секунд).</p>
 
-    <label>J2
-      <input id="j2" type="checkbox" checked style="margin-left:8px">
-    </label>
+    <button id="run-btn" py-click="run_simulation()">Запустить моделирование</button>
+    <div id="loading"></div>
 
-    <label>Релятивистские эффекты
-      <input id="rel" type="checkbox" checked style="margin-left:8px">
-    </label>
+    <div id="plot-area"></div>
 
-    <button id="run">Запустить</button>
-    <button id="stop" class="secondary">Остановить</button>
-  </div>
-</div>
+    <h3>Журнал расчетов:</h3>
+    <div id="output-text">Здесь появятся результаты...</div>
 
-<div class="grid">
-  <div class="card">
-    <h3>Графики</h3>
-    <div id="plot"></div>
-  </div>
+    <py-config>
+        packages = ["numpy", "matplotlib", "scipy"]
+        [[fetch]]
+        files = ["./simulation.py"]
+    </py-config>
 
-  <div class="card">
-    <h3>Статус и потоковый вывод</h3>
-    <div style="margin-bottom:8px">Прогресс:</div>
-    <div class="progress"><i id="bar"></i></div>
-    <div style="height:10px"></div>
-    <div id="output">Готов к запуску.</div>
-    <footer>Первая загрузка Pyodide может занять несколько секунд — ждите.</footer>
-  </div>
-</div>
+    <script type="py">
+        import simulation
+        import matplotlib.pyplot as plt
+        from pyscript import display, Element
+        import sys
+        from io import StringIO
 
-<!-- PyScript код -->
-<py-script>
-from js import document
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.integrate import solve_ivp
-from pyodide.ffi import create_proxy
-from pyscript import display
-import math
+        def run_simulation(*args):
+            # Блокируем кнопку и показываем статус
+            Element("loading").write("Идет расчет дифференциальных уравнений... Подождите...")
+            Element("run-btn").element.disabled = True
+            
+            # Очищаем предыдущие результаты
+            Element("output-text").clear()
+            Element("plot-area").clear()
 
-output = document.getElementById("output")
-bar = document.getElementById("bar")
+            # Перехват print() чтобы выводить текст в div
+            # Мы создаем "ловушку" для текста
+            class StdoutRedirector:
+                def write(self, text):
+                    # Добавляем текст в div
+                    current_content = Element("output-text").element.innerText
+                    Element("output-text").element.innerText = current_content + text
+                def flush(self):
+                    pass
+            
+            sys.stdout = StdoutRedirector()
 
-def log(msg):
-    output.innerHTML += msg + "\n"
-    output.scrollTop = output.scrollHeight
-
-def set_progress(pct):
-    pct = max(0, min(100, pct))
-    bar.style.width = f"{pct:.2f}%"
-
-_running = {'flag': False}
-
-class SatelliteSystem:
-    def __init__(self, relativistic=True, include_J2=True):
-        self.G = 6.67430e-11
-        self.M = 5.9742e24
-        self.R = 6378137.0
-        self.mu = self.G * self.M
-        self.rel = relativistic
-        self.J2 = include_J2
-
-    def acc(self, r, v):
-        r_norm = np.linalg.norm(r)
-        a = -self.mu * r / r_norm**3
-        return a
-
-def rhs(t, y, system):
-    r = y[:3]
-    v = y[3:]
-    a = system.acc(r, v)
-    return np.concatenate([v, a])
-
-def integrate(state, t_eval, system):
-    sol = solve_ivp(lambda t,y: rhs(t,y,system), (t_eval[0], t_eval[-1]), state, t_eval=t_eval, rtol=1e-9)
-    return sol.t, sol.y
-
-def run(ev=None):
-    if _running['flag']:
-        log("Выполняется уже...")
-        return
-    _running['flag'] = True
-    output.innerHTML = ""
-    set_progress(0)
-
-    days = int(document.getElementById('days').value)
-    npoints = int(document.getElementById('npoints').value)
-
-    system = SatelliteSystem()
-    r0 = np.array([system.R + 400e3, 0, 0])
-    v0 = np.array([0, math.sqrt(system.mu/np.linalg.norm(r0)), 0])
-    state = np.concatenate([r0, v0])
-    t_eval = np.linspace(0, days*86400, npoints)
-
-    log("Интеграция...")
-    t, y = integrate(state, t_eval, system)
-    set_progress(100)
-
-    log("Рисуем график...")
-    plt.figure(figsize=(6,4))
-    plt.plot(t/86400, y[0])
-    plt.xlabel("Время (дни)")
-    plt.ylabel("X (м)")
-    plt.grid(True)
-    display(plt.gcf(), target="plot")
-    log("Готово")
-    _running['flag'] = False
-
-def stop(ev=None):
-    _running['flag'] = False
-    log("Остановлено пользователем")
-
-run_btn = document.getElementById("run")
-stop_btn = document.getElementById("stop")
-run_btn.addEventListener("click", create_proxy(run))
-stop_btn.addEventListener("click", create_proxy(stop))
-</py-script>
-
+            try:
+                # ЗАПУСК ТВОЕГО КОДА
+                fig = simulation.main()
+                
+                # Отображение графика
+                display(fig, target="plot-area")
+                
+                Element("loading").write("Готово!")
+            except Exception as e:
+                print(f"Ошибка: {e}")
+                Element("loading").write("Произошла ошибка (см. журнал).")
+            finally:
+                Element("run-btn").element.disabled = False
+                # Возвращаем print обратно (опционально)
+                # sys.stdout = sys.__stdout__
+    </script>
 </body>
 </html>
