@@ -5,58 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Орбитальная симуляция — PyScript</title>
 
-  <!-- PyScript (Pyodide) -->
-<link rel="stylesheet" href="https://pyscript.net/releases/2023.11.1/pyscript.css" />
-<script defer src="https://pyscript.net/releases/2023.11.1/pyscript.js"></script>
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.6.1/core.css" />
+  <script defer src="https://pyscript.net/releases/2024.6.1/core.js"></script>
 
   <style>
-    :root{--accent:#2563eb;--muted:#6b7280}
-    body{font-family:Inter, system-ui, -apple-system, sans-serif; margin:18px; background:#f7fafc;color:#0f172a}
+    body{font-family:Inter, sans-serif; margin:18px; background:#f7fafc;color:#0f172a}
     .card{background:white;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.06);margin-bottom:16px}
     header{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-    h1{font-size:20px;margin:0}
     .controls{display:flex;gap:12px;flex-wrap:wrap}
-    label{font-size:13px;color:var(--muted)}
-
-    button{background:var(--accent);color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+    label{font-size:13px;color:#6b7280}
+    button{background:#2563eb;color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
     button.secondary{background:#e2e8f0;color:#0f172a}
-
     #output{height:200px;overflow:auto;background:#0b1220;color:#e6eef8;padding:10px;border-radius:8px;font-family:monospace;font-size:13px}
-
     #plot{min-height:420px}
-
     .progress{height:12px;background:#e6eef8;border-radius:999px;overflow:hidden}
-    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#7c3aed);width:0%}
-
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,#2563eb,#7c3aed);width:0%}
     .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
-
-    footer{font-size:13px;color:var(--muted);margin-top:8px}
-
-    @media (max-width:900px){.grid{grid-template-columns:1fr} }
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
+
   <div class="card header">
     <header>
-      <h1>Визуальная орбитальная симуляция — PyScript</h1>
-      <div style="margin-left:auto;color:var(--muted);font-size:13px">Запуск в браузере (Pyodide)</div>
+      <h1>Орбитальная симуляция — PyScript</h1>
+      <div style="margin-left:auto;color:#6b7280;font-size:13px">Pyodide в браузере</div>
     </header>
+
     <div class="controls">
-      <label>Дней моделирования
-        <input id="days" type="number" value="30" min="1" max="365" style="width:110px;margin-left:8px">
-      </label>
-
-      <label>Точек (плотность)
-        <input id="npoints" type="number" value="1500" min="200" max="20000" step="100" style="width:120px;margin-left:8px">
-      </label>
-
-      <label>J2
-        <input id="j2" type="checkbox" checked style="margin-left:8px">
-      </label>
-
-      <label>Релятивистские эффекты
-        <input id="rel" type="checkbox" checked style="margin-left:8px">
-      </label>
+      <label>Дней <input id="days" type="number" value="10" min="1" max="365"></label>
+      <label>Точек <input id="npoints" type="number" value="2000" min="300" max="20000"></label>
+      <label>J2 <input id="j2" type="checkbox" checked></label>
+      <label>Rel <input id="rel" type="checkbox" checked></label>
 
       <button id="run">Запустить</button>
       <button id="stop" class="secondary">Остановить</button>
@@ -70,38 +50,38 @@
     </div>
 
     <div class="card">
-      <h3>Статус и потоковый вывод</h3>
-      <div style="margin-bottom:8px">Прогресс:</div>
+      <h3>Вывод</h3>
       <div class="progress"><i id="bar"></i></div>
-      <div style="height:10px"></div>
       <div id="output">Готов к запуску.</div>
-      <footer>Подсказка: первая загрузка Pyodide занимает время — ждите загрузки зависимостей.</footer>
     </div>
   </div>
 
-  <!-- PyScript code (вставьте/отредактируйте если нужно) -->
-  <py-script output="false">
-from js import document, console
-import math
+<!-- PyScript config -->
+<script type="py-config">
+packages = ["numpy", "matplotlib", "scipy"]
+</script>
+
+<!-- PYTHON CODE -->
+<script type="py">
+
+from js import document
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
-from pyodide.ffi import create_proxy
 from pyscript import display
 
-# --- Небольшая обёртка для потокового вывода в div#output ---
 output = document.getElementById("output")
 bar = document.getElementById("bar")
 
-def log(msg):
-    output.innerHTML = output.innerHTML + msg + "\n"
+def log(x):
+    output.innerHTML += str(x) + "<br>"
     output.scrollTop = output.scrollHeight
 
-def set_progress(pct):
-    pct = max(0, min(100, pct))
-    bar.style.width = f"{pct:.2f}%"
+def set_progress(p):
+    bar.style.width = f"{p:.1f}%"
 
-# --- Оптимизированная реализация симулятора (вариант твоего кода) ---
+# --- твой класс физики ---
 class RealisticSatelliteSystem:
     def __init__(self, relativistic=True, include_J2=True):
         self.G = 6.67430e-11
@@ -110,252 +90,71 @@ class RealisticSatelliteSystem:
         self.M_earth = 5.9742e24
         self.R_earth = 6378137.0
         self.J2 = 1.08263e-3
-        self.omega_earth = 7.292115e-5
         self.mu = self.G * self.M_earth
         self.relativistic = relativistic
         self.include_J2 = include_J2
 
-    def geodesic_acc(self, r_vec, v_vec):
-        r = np.linalg.norm(r_vec)
-        a_newton = -self.mu * r_vec / r**3
-        a_total = a_newton
-        if self.relativistic:
-            v2 = np.dot(v_vec, v_vec)
-            term1 = (4*self.mu / r - v2) * r_vec
-            term2 = 4 * np.dot(r_vec, v_vec) * v_vec
-            a_rel = (self.mu / (self.c2 * r**3)) * (term1 + term2)
-            a_total = a_total + a_rel
-        if self.include_J2 and r > self.R_earth:
-            x,y,z = r_vec
-            r2 = r**2
-            r5 = r**5
-            j2 = 1.5 * self.J2 * self.mu * self.R_earth**2 / r5
-            a_j2_x = j2 * x * (5*z*z / r2 - 1)
-            a_j2_y = j2 * y * (5*z*z / r2 - 1)
-            a_j2_z = j2 * z * (5*z*z / r2 - 3)
-            a_total = a_total + np.array([a_j2_x, a_j2_y, a_j2_z])
-        return a_total
+    def geodesic_acc(self, r, v):
+        R = np.linalg.norm(r)
+        a = -self.mu * r / R**3
+        return a
 
-# Возвращает производные для solve_ivp
-def rhs_geodesic(t, state, system):
-    x,y,z,vx,vy,vz = state
-    r_vec = np.array([x,y,z])
-    v_vec = np.array([vx,vy,vz])
-    a = system.geodesic_acc(r_vec, v_vec)
-    return [vx,vy,vz,a[0],a[1],a[2]]
+def rhs(t, y, sys):
+    r = np.array([y[0],y[1],y[2]])
+    v = np.array([y[3],y[4],y[5]])
+    a = sys.geodesic_acc(r,v)
+    return [v[0],v[1],v[2],a[0],a[1],a[2]]
 
-# Чисто ньютоновский RHS (если нужно)
-def rhs_newton(t, state, system):
-    x,y,z,vx,vy,vz = state
-    r_vec = np.array([x,y,z])
-    r = np.linalg.norm(r_vec)
-    a = -system.mu * r_vec / r**3
-    if system.include_J2 and r > system.R_earth:
-        x,y,z = r_vec
-        r2 = r**2
-        r5 = r**5
-        j2 = 1.5 * system.J2 * system.mu * system.R_earth**2 / r5
-        a_j2_x = j2 * x * (5*z*z / r2 - 1)
-        a_j2_y = j2 * y * (5*z*z / r2 - 1)
-        a_j2_z = j2 * z * (5*z*z / r2 - 3)
-        a = a + np.array([a_j2_x, a_j2_y, a_j2_z])
-    return [vx,vy,vz,a[0],a[1],a[2]]
+_running = False
 
-# Разбиение интеграции на чанки чтобы можно было обновлять прогресс и потоковый вывод
-
-def integrate_chunked(rhs_func, t_eval, initial_state, system, chunks=25):
-    t_full = []
-    y_full = []
-    n = len(t_eval)
-    # заранее заполним чтобы аккуратно склеить
-    last_state = initial_state
-    idx = 0
-    for i in range(chunks):
-        start_idx = int(i*n/chunks)
-        end_idx = int((i+1)*n/chunks)
-        if start_idx >= end_idx:
-            continue
-        t_segment = t_eval[start_idx:end_idx]
-        if len(t_segment) == 0:
-            continue
-        t_span = (float(t_segment[0]), float(t_segment[-1]))
-        # если первый сегмент начинается не с нуля — убедимся, что начальный момент совпадает
-        sol = solve_ivp(lambda t, y: rhs_func(t,y,system), t_span, last_state,
-                        t_eval=t_segment, method='DOP853', rtol=1e-9, atol=1e-11)
-        if sol.status < 0:
-            log(f"Ошибка интегратора: {sol.message}")
-            break
-        # склеиваем результаты
-        if len(t_full)==0:
-            t_full = list(sol.t)
-            y_full = list(sol.y.T)
-        else:
-            # пропустить первый элемент чтобы не дублировать
-            t_full += list(sol.t[1:])
-            y_full += list(sol.y.T[1:])
-        last_state = sol.y[:, -1]
-        idx += 1
-        set_progress((i+1)/chunks*100)
-        log(f"Закончен чанк {i+1}/{chunks}  (t={t_span[0]:.0f}..{t_span[1]:.0f} s)")
-    # приводим к numpy-массиву
-    t_full = np.array(t_full)
-    y_full = np.array(y_full).T
-    return t_full, y_full
-
-# Создание типичных спутников (GPS/GLONASS/Galileo/LEO)
-def create_satellites(system):
-    sats = []
-    # GPS
-    r_gps = 26560e3
-    v_gps = math.sqrt(system.mu / r_gps)
-    inc = math.radians(55)
-    sats.append({'name':'GPS','state':[r_gps,0,0,0,v_gps*math.cos(inc),v_gps*math.sin(inc)],'color':'blue'})
-    # GLONASS
-    r_g = 25500e3
-    v_g = math.sqrt(system.mu / r_g)
-    incg = math.radians(64.8)
-    sats.append({'name':'ГЛОНАСС','state':[r_g,0,0,0,v_g*math.cos(incg),v_g*math.sin(incg)],'color':'green'})
-    # Galileo
-    r_ga = 29600e3
-    v_ga = math.sqrt(system.mu / r_ga)
-    incga = math.radians(56)
-    sats.append({'name':'Galileo','state':[r_ga,0,0,0,v_ga*math.cos(incga),v_ga*math.sin(incga)],'color':'orange'})
-    # LEO (МКС)
-    r_iss = system.R_earth + 400e3
-    v_iss = math.sqrt(system.mu / r_iss)
-    sats.append({'name':'Низкая орбита (МКС)','state':[r_iss,0,0,0,v_iss,0],'color':'red'})
-    return sats
-
-# Анализ результатов (построение трёх графиков, как в твоём коде)
-
-def analyze_and_plot(system, results_dict):
-    # Создаём 1x3 фигуру
-    fig, axes = plt.subplots(1,3,figsize=(12,4))
-    colors = {'GPS':'blue','ГЛОНАСС':'green','Galileo':'orange','Низкая орбита (МКС)':'red'}
-
-    daily_position_errors = {}
-    daily_time_errors = {}
-
-    for name, res in results_dict.items():
-        t_new = res['newton']['t']
-        y_new = res['newton']['y']
-        t_rel = res['relativistic']['t']
-        y_rel = res['relativistic']['y']
-
-        t_days = t_new/86400
-        delta_r = np.sqrt(np.sum((y_rel[:3,:] - y_new[:3,:])**2, axis=0))
-        axes[0].plot(t_days, delta_r, color=colors[name], label=name)
-
-        # time error (пример)
-        positions = y_rel[:3,:]
-        velocities = y_rel[3:,:]
-        n_points = positions.shape[1]
-        time_error = np.zeros(n_points)
-        for i in range(1,n_points):
-            r = np.linalg.norm(positions[:,i])
-            v = np.linalg.norm(velocities[:,i])
-            U_surface = system.mu/system.R_earth
-            U_sat = system.mu/r
-            dt_inst = (U_surface - U_sat)/system.c2 - v*v/(2*system.c2)
-            dt = t_rel[i] - t_rel[i-1]
-            time_error[i] = time_error[i-1] + dt_inst*dt
-        axes[1].plot(t_days, time_error*1e6, color=colors[name], label=name)
-
-        idx_day = np.argmax(t_new > 86400)
-        if idx_day>0 and idx_day < len(delta_r):
-            daily_position_errors[name] = delta_r[idx_day]
-
-    # bar plot
-    names = list(daily_position_errors.keys())
-    vals = [daily_position_errors[n] for n in names]
-    axes[2].bar(range(len(names)), vals, color=[colors[n] for n in names])
-    axes[2].set_xticks(range(len(names)))
-    axes[2].set_xticklabels(names, rotation=45, ha='right')
-
-    axes[0].set_yscale('log')
-    axes[0].set_xlabel('Дни')
-    axes[0].set_ylabel('Ошибка (м)')
-    axes[1].set_xlabel('Дни')
-    axes[1].set_ylabel('Ошибка времени (мкс)')
-
-    axes[0].legend(fontsize=8)
-    axes[1].legend(fontsize=8)
-
-    plt.tight_layout()
-    return fig, daily_position_errors
-
-# Главная функция запуска — chunked integration + потоковый вывод
-
-_running = {'flag': False}
-
-async def run_all(ev=None):
-    if _running['flag']:
-        log('Уже выполняется')
+async def run_all(event=None):
+    global _running
+    if _running:
         return
-    _running['flag'] = True
+
+    _running = True
+    output.innerHTML = "Запуск...<br>"
     set_progress(0)
-    output.innerHTML = ''
 
-    days = int(document.getElementById('days').value)
-    npoints = int(document.getElementById('npoints').value)
-    include_J2 = document.getElementById('j2').checked
-    rel = document.getElementById('rel').checked
+    days = int(document.getElementById("days").value)
+    npoints = int(document.getElementById("npoints").value)
+    j2 = document.getElementById("j2").checked
+    rel = document.getElementById("rel").checked
 
-    log(f'Параметры: {days} дн, {npoints} точек, J2={include_J2}, Relativistic={rel}')
+    sys = RealisticSatelliteSystem(relativistic=rel, include_J2=j2)
+    log("Параметры загружены")
 
-    system = RealisticSatelliteSystem(relativistic=rel, include_J2=include_J2)
-    sats = create_satellites(system)
+    t_eval = np.linspace(0, days*86400, npoints)
+    y0 = [sys.R_earth+400000, 0,0, 0,7700,0]
 
-    t_span = (0, days * 86400)
-    t_eval = np.linspace(t_span[0], t_span[1], npoints)
+    log("Интеграция...")
+    sol = solve_ivp(lambda t,y: rhs(t,y,sys),
+                    (0, days*86400),
+                    y0, t_eval=t_eval)
 
-    all_results = {}
-    total_sats = len(sats)
+    log("Построение графика...")
+    fig, ax = plt.subplots(figsize=(6,4))
+    R = np.sqrt(sol.y[0]**2 + sol.y[1]**2 + sol.y[2]**2)
+    ax.plot(t_eval/86400, R/1000)
+    ax.set_xlabel("Дни")
+    ax.set_ylabel("Высота, км")
 
-    for i, sat in enumerate(sats):
-        if not _running['flag']:
-            log('Остановлено пользователем')
-            break
-        log(f"Моделируем спутник: {sat['name']} ({i+1}/{total_sats})")
+    display(fig, target="plot")
+    log("Готово!")
 
-        # Ньютоновская и релятивистская модели — интеграция чанками
-        set_progress((i/total_sats)*100*0.1)
-        newton_t, newton_y = integrate_chunked(rhs_newton, t_eval, sat['state'], system, chunks=20)
-        set_progress((i/total_sats)*100*0.5)
-        rel_t, rel_y = integrate_chunked(rhs_geodesic, t_eval, sat['state'], system, chunks=20)
-
-        all_results[sat['name']] = {
-            'newton': {'t': newton_t, 'y': newton_y},
-            'relativistic': {'t': rel_t, 'y': rel_y}
-        }
-        set_progress(((i+1)/total_sats)*100)
-        log(f"Завершён спутник: {sat['name']}")
-
-    # Построение итоговых графиков
-    if len(all_results)>0:
-        log('Построение графиков...')
-        fig, daily = analyze_and_plot(system, all_results)
-        display(fig, target='plot')
-        log('Готово')
-    else:
-        log('Нет результатов для отображения')
-
-    _running['flag'] = False
+    _running = False
     set_progress(100)
 
-# Останавливаем выполнение
+def stop_all(event=None):
+    global _running
+    _running = False
+    log("Остановлено.")
 
-def stop_all(ev=None):
-    _running['flag'] = False
-    log('Запрошена остановка')
+# привязка кнопок
+document.getElementById("run").addEventListener("click", run_all)
+document.getElementById("stop").addEventListener("click", stop_all)
 
-# Привязки UI
-run_btn = document.getElementById('run')
-stop_btn = document.getElementById('stop')
-run_btn.addEventListener('click', create_proxy(lambda e: __import__('asyncio').get_event_loop().create_task(run_all(e))))
-stop_btn.addEventListener('click', create_proxy(stop_all))
-
-  </py-script>
+</script>
 
 </body>
 </html>
