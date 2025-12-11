@@ -14,7 +14,7 @@ class RealisticSatelliteSystem:
         self.c = 299792458  # м/с
         self.c2 = self.c ** 2
 
-        # Параметры Земли (Stjarnhimlen(сайт с которого брался метод расчета))
+        # Параметры Земли
         self.M_earth = 5.9742e24  # кг
         self.R_earth = 6378137.0  # м
         self.J2 = 1.08263e-3  # Коэффициент сжатия Земли
@@ -23,7 +23,7 @@ class RealisticSatelliteSystem:
         # Гравитационный параметр Земли
         self.mu = self.G * self.M_earth
 
-        # Флаги для включения эффектов(не трогать)
+        # Флаги для включения эффектов
         self.relativistic = relativistic
         self.include_J2 = True
 
@@ -36,6 +36,7 @@ class RealisticSatelliteSystem:
     def geodesic_equation(self, t, state):
         """
         Уравнения геодезической в постньютоновском приближении
+        (Релятивистская модель)
         """
         x, y, z, vx, vy, vz = state
 
@@ -62,7 +63,6 @@ class RealisticSatelliteSystem:
             r2 = r ** 2
             r5 = r ** 5
 
-            # J2
             j2_factor = 1.5 * self.J2 * self.mu * self.R_earth ** 2 / r5
 
             a_j2_x = j2_factor * x * (5 * z ** 2 / r2 - 1)
@@ -241,7 +241,7 @@ def analyze_results(system, results):
     colors = {'GPS': 'blue', 'ГЛОНАСС': 'green', 'Galileo': 'orange', 'Низкая орбита (МКС)': 'red'}
 
     # 1. Накопленная ошибка в положении из-за ОТО
-    ax1.set_title('Накопленная ошибка в положении из-за ОТО')
+    ax1.set_title('Накопленная ошибка в положении из-за ОТО (Логарифмическая шкала)')
     ax1.set_xlabel('Время (дни)')
     ax1.set_ylabel('Ошибка положения (метры)')
     ax1.grid(True, alpha=0.3)
@@ -342,7 +342,7 @@ def analyze_results(system, results):
         bar_colors = [colors[name] for name in sat_names]
 
         bars = ax3.bar(range(len(sat_names)), error_values_km,
-                       color=bar_colors, alpha=0.8)
+                        color=bar_colors, alpha=0.8)
         ax3.set_xticks(range(len(sat_names)))
         ax3.set_xticklabels(sat_names, rotation=45, ha='right')
 
@@ -350,7 +350,7 @@ def analyze_results(system, results):
         for bar, value in zip(bars, error_values_km):
             height = bar.get_height()
             ax3.text(bar.get_x() + bar.get_width() / 2, height * 1.02,
-                     f'{value:.2f} км', ha='center', va='bottom', fontsize=9)
+                      f'{value:.2f} км', ha='center', va='bottom', fontsize=9)
 
     # Настраиваем легенды
     ax1.legend(loc='upper left', fontsize=8)
@@ -372,7 +372,7 @@ def analyze_results(system, results):
 
     plt.tight_layout(rect=[0, 0.1, 1, 0.95])
     plt.suptitle('Лабораторная работа: Влияние ОТО на точность спутниковых навигационных систем',
-                 fontsize=12, fontweight='bold')
+                  fontsize=12, fontweight='bold')
 
     return fig, daily_position_errors
 
@@ -462,7 +462,7 @@ def main(simulation_days=30):
 
     # Параметры моделирования
     t_span = (0, simulation_days * 86400)  # секунд
-    t_eval = np.linspace(t_span[0], t_span[1], 1500)  # точек для расчета(1500 приемлимая точность)
+    t_eval = np.linspace(t_span[0], t_span[1], 1500)  # точек для расчета
 
     print(f"Параметры моделирования:")
     print(f"  Длительность: {simulation_days} дней")
