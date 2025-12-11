@@ -443,13 +443,13 @@ def demonstrate_gps_effects():
     gps_result = [r for r in results if r['name'] == 'GPS'][0]
 
     print(f"\n1. Релятивистские эффекты GPS (в нс/сек):")
-    print(f"   Гравитационный эффект (ОТО): +{gps_result['delta_grav'] * 1e9:.2f} нс/сек")
-    print(f"   Кинематический эффект (СТО): {gps_result['delta_kin'] * 1e9:.2f} нс/сек")
-    print(f"   Суммарный эффект (спешка): +{gps_result['delta_total'] * 1e9:.2f} нс/сек")
+    print(f"    Гравитационный эффект (ОТО): +{gps_result['delta_grav'] * 1e9:.2f} нс/сек")
+    print(f"    Кинематический эффект (СТО): {gps_result['delta_kin'] * 1e9:.2f} нс/сек")
+    print(f"    Суммарный эффект (спешка): +{gps_result['delta_total'] * 1e9:.2f} нс/сек")
 
     print(f"\n2. Накопление за сутки:")
-    print(f"   Ошибка времени: {gps_result['time_error']:.2f} микросекунд")
-    print(f"   Ошибка позиционирования: {gps_result['positioning_error'] / 1000:.2f} километров")
+    print(f"    Ошибка времени: {gps_result['time_error']:.2f} микросекунд")
+    print(f"    Ошибка позиционирования: {gps_result['positioning_error'] / 1000:.2f} километров")
 
 
 def main(simulation_days=30):
@@ -465,9 +465,9 @@ def main(simulation_days=30):
     t_eval = np.linspace(t_span[0], t_span[1], 1500)  # точек для расчета(1500 приемлимая точность)
 
     print(f"Параметры моделирования:")
-    print(f"  Длительность: {simulation_days} дней")
-    print(f"  Включен эффект J2: {relativistic_system.include_J2}")
-    print(f"  Включены релятивистские эффекты: {relativistic_system.relativistic}")
+    print(f"  Длительность: {simulation_days} дней")
+    print(f"  Включен эффект J2: {relativistic_system.include_J2}")
+    print(f"  Включены релятивистские эффекты: {relativistic_system.relativistic}")
     print(f"\nМоделирование спутниковых систем:")
 
     # Моделируем каждый спутник
@@ -495,11 +495,11 @@ def main(simulation_days=30):
     for sat_name, error in daily_pos_errors.items():
         # Ошибка положения (метры)
         if error > 100:
-             print(f"  {sat_name}: {error:.2f} м (Значительное расхождение траекторий!)")
+             print(f"  {sat_name}: {error:.2f} м (Значительное расхождение траекторий!)")
         elif error > 1:
-             print(f"  {sat_name}: {error:.2f} м (Небольшое, но заметное расхождение)")
+             print(f"  {sat_name}: {error:.2f} м (Небольшое, но заметное расхождение)")
         else:
-             print(f"  {sat_name}: {error:.3f} м (Минимальное расхождение)")
+             print(f"  {sat_name}: {error:.3f} м (Минимальное расхождение)")
 
 
     return fig
